@@ -10,8 +10,7 @@ int main()
 	std::cout << "\n\n\n";
 	std::cout << "fuck\n";
 
-	GammonRunner g;
-	std:: cout << g.getFuck();
+	GammonRunner g(true);
 
 
 

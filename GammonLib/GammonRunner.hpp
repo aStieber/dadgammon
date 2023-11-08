@@ -1,5 +1,9 @@
 #include <string>
 
+#include "State.hpp"
+#include "Move.hpp"
+
+
 class GammonRunner
 {
 	//GammonRunner holds the state. GammonRunner receives moves, passes moves + game state to GammonBoy
@@ -11,7 +15,9 @@ class GammonRunner
 	//GammonMove
 	//GameState
 public:
+	GammonRunner(bool blackStarts);
 
-	std::string getFuck();
-	
+
+private:
+	State m_state;	
 };
