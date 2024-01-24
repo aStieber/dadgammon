@@ -6,9 +6,9 @@
 
 class GammonRunner
 {
-	//GammonRunner holds the state. GammonRunner receives moves, passes moves + game state to GammonBoy
+	//GammonRunner holds the state. GammonRunner receives moves, pushes them into the state.
 
-	//GammonBoy receives a move + a state, calculates new game state.
+	//GammonRunner receives a move, calculates new game state.
 
 	//parser for stdin to move
 
@@ -17,7 +17,13 @@ class GammonRunner
 public:
 	GammonRunner(bool blackStarts);
 
+	bool isGameOver();
+	Color getCurrentPlayer() { return m_currentPlayer; };
+
+	bool processMove(Play& p);
+
 
 private:
 	State m_state;	
+	Color m_currentPlayer=Color::BLACK;
 };
