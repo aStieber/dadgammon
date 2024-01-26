@@ -5,6 +5,9 @@
 #include "PlayExplorer.hpp"
 
 
+#include <chrono>
+#include <ctime>
+
 GammonRunner::GammonRunner(bool blackStarts)
 {
 	m_state = State();
@@ -16,7 +19,6 @@ bool GammonRunner::isGameOver()
 	return m_state.getWinner() != Color::NONE;
 	
 }
-
 bool GammonRunner::processMove(Play& p)
 {
 /*
@@ -31,10 +33,15 @@ bool GammonRunner::processMove(Play& p)
 		std::cout << MoveLawyer::getLegalPlays(p.state, p.color == Color::WHITE ? Color::BLACK : Color::WHITE).size() << "\n";
 	}
 */
-	Play best = PlayExplorer::findBestPlay(p, {3, 5}, 2);
 
+	std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
 
+	Play best = PlayExplorer::findBestPlay(p, {3, 3}, 2);
 
+	std::chrono::time_point<std::chrono::system_clock> endTime = std::chrono::system_clock::now();
+	double duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+	float nodesPerMs = getNodeCtorCount() / duration;
+	cout << "Speed: " << nodesPerMs << " nodes/ms" <<endl;
 
 	exit(0);
 

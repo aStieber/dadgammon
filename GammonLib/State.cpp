@@ -3,33 +3,16 @@
 #include <cmath>
 
 
-using namespace std;
-
-const int BOARD_LENGTH = 24;
 State::State()
 {
-	m_board = std::vector<int>(BOARD_LENGTH);
-
-	//white/+
-	m_board[0] = 2;
-	m_board[11] = 5;
-	m_board[16] = 3;
-	m_board[18] = 5;
-
-	//black/-
-	m_board[23] = -2;
-	m_board[12] = -5;
-	m_board[7] = -3;
-	m_board[5] = -5;
-
-	m_blackBumpedCount = 0;
-	m_whiteBumpedCount = 0;
+	m_board = Board();
 }
 
 Color State::getWinner() const
 {
-	int whiteCount = m_whiteBumpedCount;
-	int blackCount = m_blackBumpedCount;
+	//todo: this can be improved
+	int whiteCount = getBumpedCount(Color::WHITE);
+	int blackCount = getBumpedCount(Color::BLACK);
 	for (size_t i = 0; i < m_board.size(); i++)
 	{
 		if (m_board[i] > 0) whiteCount += abs(m_board[i]);
@@ -41,22 +24,12 @@ Color State::getWinner() const
 }
 
 
-int State::getBumpedCountConst(const Color& c) const
+signed char State::getBumpedCount(const Color& c) const
 {
 	switch(c)
 	{
-	case Color::BLACK: return m_blackBumpedCount;
-	case Color::WHITE: return m_whiteBumpedCount;
-	default: throw runtime_error("Requested some bullshit");
-	}
-}
-
-int& State::getBumpedCount(const Color& c)
-{
-	switch(c)
-	{
-	case Color::BLACK: return m_blackBumpedCount;
-	case Color::WHITE: return m_whiteBumpedCount;
+	case Color::BLACK: return m_board.getBumpedCount(Color::BLACK);
+	case Color::WHITE: return m_board.getBumpedCount(Color::WHITE);
 	default: throw runtime_error("Requested some bullshit");
 	}
 }
@@ -73,7 +46,7 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 	}
 	if (end == Special::OFF)
 	{
-		m_board[start] -= delta;
+		m_board.modify(start, -delta);
 		return true;
 	}
 	if (m_board[start] == 0)
@@ -82,19 +55,18 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 	}
 
 	if (!placePiece(end, turn)) return false;
-	m_board[start] -= 1;
+	m_board.modify(start, -1);
 
 	return true;
 }
 
 bool State::moveBumpedPiece(int8_t end, const Color& turn)
 {
-	if (int& bc = getBumpedCount(turn))
+	if (int bc = getBumpedCount(turn))
 	{
-		bc -= 1;
-
+		m_board.modifyBumpedCount(turn, -1);
 		placePiece(end, turn);
-		m_board[end] -= (uint8_t)turn;
+		m_board.modify(end, (signed char)-turn);
 		return true;
 	}
 	throw runtime_error("empty bump count");
@@ -106,12 +78,12 @@ bool State::placePiece(int8_t end, const Color& turn)
 	if (isPointEmpty(end) || isPointFriendly(end, turn))
 	{
 		//moving to an empty point or existing friendly stack
-		m_board[end] += delta;
+		m_board.modify(end,delta);
 	}
 	else if (getPieceCount(end) == 1) //bumping
 	{
-		m_board[end] = delta;
-		getBumpedCount((Color)(delta * -1))++;
+		m_board.insert(end, delta);
+		m_board.modify((Color)(delta * -1), 1);
 	}
 	else return false; //more than 1 enemy color, fail turn.
 	return true;
@@ -148,8 +120,8 @@ float State::calculateScore() const
 
 	//improvements here, can check state of opponent home zone.
 	constexpr float BUMPED_PENALTY = 24+3.5;
-	score += m_blackBumpedCount * BUMPED_PENALTY;
-	score -= m_whiteBumpedCount * BUMPED_PENALTY;
+	score += getBumpedCount(Color::BLACK) * BUMPED_PENALTY;
+	score -= getBumpedCount(Color::WHITE) * BUMPED_PENALTY;
 
 	constexpr float WIN_REWARD = 1000.;
 	switch (getWinner())
@@ -176,7 +148,137 @@ float State::calculateScore() const
 			score += penaltyDirection * 10;
 	}
 
-
-
 	return score;
+}
+
+string State::toDebugStr() const
+{
+	std::ostringstream ss;
+	ss << "WB:" << (int)getBumpedCount(Color::WHITE)<< " BB:" << (int)getBumpedCount(Color::BLACK) 
+		<< " Board:" << boardToHex(getBoard().getRawBoard());
+	return ss.str();
+}
+
+const __int128 POINT_MASK = 0x1F;
+//Points are 5 bit signed integers. They occupy 0x00-0x77.
+signed char Board::operator[](int i) const
+{
+	signed char tmp = (board >> (i * 5)) & POINT_MASK;
+	if (tmp & 0x10)
+		tmp = tmp | 0xE0; //copy sign bit to bits 6-8.
+	return tmp;
+}
+
+void Board::modify(int index, signed char delta)
+{
+	//cout << "modify index: " << index << " delta: " <<(int)delta << " current val: " <<  (int)this->operator[](index) << endl;
+	//cout << boardToBin(board) << endl;
+	insert(index, this->operator[](index) + delta);
+}
+
+void Board::insert(int i, signed char value)
+{
+	int oldVal = (int)this->operator[](i);
+
+	__int128 zeroedMask = ~(POINT_MASK << (i * 5));
+	__int128 valueMask = (value & 0xF)//4 value bits
+		| ((value & 0x80) >> 0x3); //sign bit moved from first signed char bit to 5th bit
+	valueMask <<= (i * 5) ; //move whole assembly to offset
+
+	// cout << "\ni: " << i << " write value: " << (int)value << endl;
+	// cout << "board before:\t" << std::bitset<64>(board >> 64) << std::bitset<64>(board) << endl;
+	// cout << "zero mask:\t" << std::bitset<64>(zeroedMask >> 64) << std::bitset<64>(zeroedMask) << endl;
+	// cout << "value mask:\t" << std::bitset<64>(valueMask >> 64) << std::bitset<64>(valueMask) << endl;
+
+	board = (board & zeroedMask) | valueMask;
+
+	// cout << "board after:\t" << std::bitset<64>(valueMask >> 64) << std::bitset<64>(valueMask) << endl;
+	// cout << "read value: " << (int)this->operator[](i) << endl;
+
+	int newVal = (int)this->operator[](i);
+	if (this->operator[](i) != value)
+	{
+		ostringstream ss;
+		ss << "Failed to write. write value: " << (int)value << " read value: " << (int)this->operator[](i);
+		throw runtime_error(ss.str());
+	}
+}
+
+const __int128 BUMP_MASK = 0xF;
+const int WHITE_BUMPED_OFFSET = 0x78; //0x78-0x7B
+const int BLACK_BUMPED_OFFSET = WHITE_BUMPED_OFFSET + 0x4; //0x7C-0x7F
+signed char Board::getBumpedCount(const Color& c) const
+{
+	return (board >> (c == Color::WHITE ? WHITE_BUMPED_OFFSET : BLACK_BUMPED_OFFSET)) & BUMP_MASK;
+}
+
+void Board::modifyBumpedCount(const Color& c, signed char delta)
+{
+	signed char val = getBumpedCount(c) + delta;
+	if (val < 0) throw runtime_error("Tried to reduce bump count below 0");
+
+	const int offset = (c == Color::WHITE ? WHITE_BUMPED_OFFSET : BLACK_BUMPED_OFFSET);
+
+	__int128 zeroedMask = ~(BUMP_MASK << offset);
+	__int128 valueMask = (val & BUMP_MASK);
+	valueMask <<= offset;
+
+	board = (board & zeroedMask) | valueMask;
+
+	if (getBumpedCount(c) != val)
+	{
+		throw runtime_error("bump write failed");
+	}
+}
+
+bool Board::operator==(const Board& rhs) const
+{
+	return board == rhs.board;
+}
+
+string boardToHex(__int128 board)
+{
+	ostringstream ss;
+	for (int i = 0; i < 128; i+=4)
+	{
+		ss << std::hex << ((long long)(board >> i) & 0xF);
+	}
+
+	string output = ss.str();
+	reverse(output.begin(), output.end());
+	return output;
+}
+
+string boardToBin(__int128 board)
+{
+	ostringstream ss;
+	ss << "0b" <<std::bitset<64>(board >> 64) << std::bitset<64>(board);
+	return ss.str();
+}
+
+
+Board::Board()
+{
+	//char tmp[16]  = 0x00f055eb97e3b879b2807fee76dfca82;
+	//board = tmp;
+	board = 0;
+	//white/+
+	insert(0, 2);
+	insert(11, 5);
+	insert(16, 3);
+	insert(18, 5);
+
+	//black/-
+	insert(23, -2);
+	insert(12, -5);
+	insert(7, -3);
+	insert(5, -5);
+
+
+	//cout << boardToBin(board) << endl;
+}
+
+const __int128& Board::getRawBoard() const
+{
+	return board;
 }

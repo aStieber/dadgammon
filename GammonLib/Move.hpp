@@ -21,10 +21,10 @@ struct Play
 {
 	Color color;
 	vector<int> dice;
-	set<Move> moves;
+	vector<Move> moves;
 	State state;
 
-	string toDebugStr(bool calculateScore=false) const;
+	string toDebugStr() const;
 private:
 };
 

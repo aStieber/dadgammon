@@ -2,13 +2,6 @@
 
 using namespace std;
 
-bool MoveLawyer::isMoveLegal(const Move& m, const State& s)
-{
-	State tmpState = s;
-	return true;//tmpState.movePiece(m.first, m.second, turn);
-}
-
-
 #include <iostream>
 #include <string>
 
@@ -57,7 +50,6 @@ void MoveLawyer::computePossiblePlaysForRoll(PlayNode* output, const pair<int,in
 		getPossiblePlaysForDice(output, p_0, {dice[1], dice[0]});
 	}
 
-
 }
 
 void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice)
@@ -103,15 +95,23 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 		Play p = currentPlay;
 		p.state = tmpState;
 		p.dice.push_back(die);
-		p.moves.insert(Move{start, end});
+		p.moves.push_back(Move{start, end});
 
 		if (remainingDice.size())
 		{
+			//cout << "RECURSING: " << p.toDebugStr() << endl;
 			getPossiblePlaysForDice(output, p, remainingDice);
 		}
-		else
+		else if (p.moves.size() == p.dice.size())
 		{
+			//cout << "INSERTING: " << p.toDebugStr() << endl;
 			output->children.insert(shared_ptr<PlayNode>(new PlayNode(p)));
+		}
+		else 
+		{
+			ostringstream ss;
+			ss << "FUCKED: " << remainingDice.size() << "\n" << p.toDebugStr() << endl;
+			throw runtime_error(ss.str());
 		}
 	}
 
@@ -127,10 +127,11 @@ vector<int8_t> MoveLawyer::getDiceFromRoll(const pair<int,int>& roll)
 
 vector<int> MoveLawyer::getSourceColumnsForDie(const State& s, const Color turn, const int8_t die)
 {
-	if (s.getBumpedCountConst(turn))
+	if (s.getBumpedCount(turn))
 	{
 		return vector<int>{ Special::BUMP };
 	}
+
 
 	vector<int> output;
 	for (int i = 0; i < s.getBoardSize(); i++)

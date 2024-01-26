@@ -3,33 +3,29 @@
 #include "CommonTypes.hpp"
 #include "Move.hpp"
 
+struct PlayNode;
+struct HashPlayNode
+{
+	__int128 operator()(const shared_ptr<PlayNode>& playNode) const;
+};
 
-static uint64_t ctor = 0, dtor = 0;
+uint64_t getNodeCtorCount();
+
+bool operator==(const shared_ptr<PlayNode>& x, const shared_ptr<PlayNode>& y);
+
 struct PlayNode
 {
-	PlayNode(const Play& origin)
-	{
-		if (ctor++ > 0 && ctor % 1000000 == 0)
-		{
-			cout << "PlayNode::ctor #" << ctor << endl;
-		}
-		play = origin;
-	}
-
-	~PlayNode()
-	{
-		if (dtor++ > 0 && dtor % 1000000 == 0)
-		{
-			cout << "PlayNode::dtor #" << dtor << endl;
-		}
-	}
+	PlayNode(const Play& origin);
+	~PlayNode();
 
 	Play play;
-	set<shared_ptr<PlayNode>> children;
+	unordered_set<shared_ptr<PlayNode>, HashPlayNode> children;
 
 	float computeScoreRec(int searchDepth);
 
-	bool getComputedScore(float& outScore);
+	bool getComputedScore(float& outScore) const;
+
+	string toDebugStr() const;
 
 private:
 	bool hasScoreBeenComputed = false;

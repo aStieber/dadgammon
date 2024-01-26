@@ -1,30 +1,19 @@
 #include "Move.hpp"
-#include <sstream>
 
-using namespace std;
-
-
-
-string Play::toDebugStr(bool calculateScore) const
+string Play::toDebugStr() const
 {
 	ostringstream ss;
 
-	ss << "Color: " << color << "\tDice: ";
+	ss << "Color: " << color << " Dice: ";
 	for (const int& die : dice)
 	{
-		ss << die << " ";
+		ss << die;
 	}
-	ss << "\tMoves: ";
+	ss << " Moves: ";
 	for (const Move& m : moves)
 	{
 		ss << "{" << (int)m.first << "," << (int)m.second << "} ";
 	}
-	ss << "\t";
-
-	if (calculateScore)
-	{
-		ss << "Score: " << state.calculateScore();
-	}
-	ss << "\n";
+	ss << "\tState: " << state.toDebugStr();
 	return ss.str();
 }

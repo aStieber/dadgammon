@@ -3,6 +3,49 @@
 #include "CommonTypes.hpp"
 
 
+
+
+/*
+
+	so it's 24 tiles that can store up to 15 pieces of either color
+	
+	so I need -15-15
+
+	so that's 5 bits
+	5*24 = 120bits + 4 bits for BB and 4 bits for WB = 128bit
+
+ok so long double has 16 bytes
+Do you know how I could write a 5-bit signed integer type? 
+I can just have masks to pull out the bits I need but...
+I guess I just mask the bits into a char. Last 4 go to the last 4 of the char, sign bit goes to the first
+
+
+*/
+
+ //0-indexed, size 24
+
+struct Board
+{
+	Board();
+	Board(const Board& b) {board = b.board;};
+
+	signed char getBumpedCount(const Color& c) const;
+	void modifyBumpedCount(const Color& c, signed char delta);
+
+
+	signed char operator[](int i) const;
+	void modify(int index, signed char delta);
+	void insert(int index, signed char value);
+	size_t size() const {return 24;} //for looping through points
+
+	bool operator==(const Board& rhs) const;
+
+	const __int128& getRawBoard() const; 
+
+private:
+	__int128 board;
+};
+
 struct State
 {
 	//array of size 24. White's farthest at 0, black's at 23.
@@ -18,7 +61,7 @@ struct State
 	bool movePiece(int8_t start, int8_t end, const Color& turn);
 
 
-	int getBumpedCountConst(const Color& c) const;
+	signed char getBumpedCount(const Color& c) const;
 
 	inline bool isPointEmpty(int8_t index) const;
 	inline int getPieceCount(int8_t index) const;
@@ -34,25 +77,24 @@ struct State
 
 	Color getWinner() const;
 
-	const std::vector<int>& getBoard() const { return m_board; } ;
+	const Board& getBoard() const { return m_board; } ;
 	static const int getBoardSize() { return 24; };
 
 	
 	//the big one. white+/black-.
 	float calculateScore() const;
 
+	std::string toDebugStr() const;
+
 
 private:
 	bool moveBumpedPiece(int8_t end, const Color& turn);
 	bool placePiece(int8_t end, const Color& turn);
 
-	inline int& getBumpedCount(const Color& c);
-
-
-	std::vector<int> m_board; //0-indexed, size 24
-
-	int m_blackBumpedCount;
-	int m_whiteBumpedCount;
+	Board m_board;
 };
+
+std::string boardToBin(__int128 board);
+std::string boardToHex(__int128 board);
 
 #endif

@@ -3,6 +3,27 @@
 
 #include <thread>
 
+
+const uint64_t divisor = 10 * 1000 * 1000;
+std::atomic_uint64_t* NODE_COUNTER=new atomic_uint64_t;
+
+uint64_t getNodeCtorCount(){
+	return *NODE_COUNTER;
+}
+
+PlayNode::PlayNode(const Play& _play)
+{
+	uint64_t count = NODE_COUNTER->fetch_add(1);
+	if (count % divisor == 0)
+	{
+		cout << "PlayNode::ctor " << count << endl;
+	}
+	play = _play;
+}
+
+PlayNode::~PlayNode(){}
+
+
 Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, int searchDepth)
 {
 	if (origin.color == Color::NONE)
@@ -13,20 +34,26 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 
 	//We only care about the score of root's children - its score is not meaningful.
 	//We compute the possible moves based on this template roll, then recursively generate opposing team possibilities.
-
 	PlayNode root(origin);
+	//create children
 
 	MoveLawyer::computePossiblePlaysForRoll(&root, roll);
-	cout <<"size: " <<  root.children.size()<< "\n"; 
 
+	// cout <<"size: " <<  root.children.size()<< "\n"; 
+	// for (const shared_ptr<PlayNode>& possiblePlay : root.children)
+	// {
+	// 	cout << possiblePlay->play.toDebugStr() << endl;
+
+	// }
+
+
+	//score the children
 	vector<thread> tasks;
 	for (const shared_ptr<PlayNode>& possiblePlay : root.children)
 	{
-	    tasks.push_back(thread { [possiblePlay, searchDepth]() {
-	    	possiblePlay->computeScoreRec(searchDepth);
-			cout << possiblePlay->play.toDebugStr();
-
-	    }});
+		tasks.push_back(thread { [possiblePlay, searchDepth]() {
+			possiblePlay->computeScoreRec(searchDepth);
+		}});
 	}
 
 	for (thread& th : tasks)
@@ -57,17 +84,12 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 		}
 	}
 
-
 	if (bestChild.get() == nullptr)
 	{
 		throw runtime_error("bestChild was null.");
 	}
 
-	cout << "The best play for dice {" << roll.first << "," << roll.second << "}: " <<
-		bestChild->play.toDebugStr() << " with score " << bestScore << endl;
-
-
-
+	cout << "\n\n=====RESULT=====\nBest Play:\n" << bestChild->toDebugStr() << endl;
 
 	return origin;
 }
@@ -109,7 +131,7 @@ float PlayNode::computeScoreRec(int searchDepth)
 	}
 
 	const float myPlayScore = play.state.calculateScore();
-	constexpr float DECAY_RATE = 0.1; //DECAY_RATE ^ N, where N in generation number.
+	constexpr float DECAY_RATE = 0.1; //DECAY_RATE ^ N, where N is generation number.
 
 	float average = 0;
 	if (childCount > 0) average = childScoreSum / childCount;
@@ -120,7 +142,7 @@ float PlayNode::computeScoreRec(int searchDepth)
 	return computedScore;
 }
 
-bool PlayNode::getComputedScore(float& outScore)
+bool PlayNode::getComputedScore(float& outScore) const
 {
 	if (hasScoreBeenComputed)
 	{
@@ -128,4 +150,29 @@ bool PlayNode::getComputedScore(float& outScore)
 		return true;
 	}
 	return false;
+}
+
+string PlayNode::toDebugStr() const
+{
+	ostringstream ss;
+
+	ss << play.toDebugStr();
+
+	float score = 0;
+	if (getComputedScore(score))
+	{
+		ss << "\tScore: " << score;
+	}
+
+	return ss.str();
+}
+
+bool operator==(const shared_ptr<PlayNode>& x, const shared_ptr<PlayNode>& y)
+{
+    return x->play.state.getBoard().getRawBoard() == y->play.state.getBoard().getRawBoard();
+}
+
+__int128 HashPlayNode::operator()(const shared_ptr<PlayNode>& playNode) const
+{
+	return playNode->play.state.getBoard().getRawBoard();
 }
