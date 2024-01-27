@@ -105,6 +105,7 @@ float PlayNode::computeScoreRec(int searchDepth)
 		MoveLawyer::computeOpponentPlays(this);
 
 		childCount = children.size();
+		//cout << "size: " << childCount << endl;
 		int bestScore = play.color * -1 * INT_MAX;
 		shared_ptr<PlayNode> bestChild;
 
@@ -161,7 +162,7 @@ string PlayNode::toDebugStr() const
 	float score = 0;
 	if (getComputedScore(score))
 	{
-		ss << "\tScore: " << score;
+		ss << "Score: " << score;
 	}
 
 	return ss.str();

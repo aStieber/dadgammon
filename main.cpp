@@ -33,8 +33,7 @@ int main()
 {
 	std::cout << "\n=====\nDadgammon\n=====\nhttps://en.wikipedia.org/wiki/Backgammon_notation\n=====\n\n";
 
-	GammonRunner g(false);
-	//GammonEngine engine;
+	GammonRunner g(1);
 	//cpu:black, player:white
 
 	while(1)

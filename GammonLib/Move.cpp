@@ -14,6 +14,8 @@ string Play::toDebugStr() const
 	{
 		ss << "{" << (int)m.first << "," << (int)m.second << "} ";
 	}
-	ss << "\tState: " << state.toDebugStr();
+	ss << "\tState: " << state.toDebugStr() <<endl;
+
+	ss << state.prettyPrint() <<endl;
 	return ss.str();
 }

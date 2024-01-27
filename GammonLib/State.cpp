@@ -259,26 +259,71 @@ string boardToBin(__int128 board)
 
 Board::Board()
 {
-	//char tmp[16]  = 0x00f055eb97e3b879b2807fee76dfca82;
-	//board = tmp;
-	board = 0;
+	board = 0x00f0000014030001;
+	board = (board << 64) | 0xb28000e836000002;
 	//white/+
-	insert(0, 2);
-	insert(11, 5);
-	insert(16, 3);
-	insert(18, 5);
+	// insert(0, 2);
+	// insert(11, 5);
+	// insert(16, 3);
+	// insert(18, 5);
 
-	//black/-
-	insert(23, -2);
-	insert(12, -5);
-	insert(7, -3);
-	insert(5, -5);
-
-
-	//cout << boardToBin(board) << endl;
+	// //black/-
+	// insert(23, -2);
+	// insert(12, -5);
+	// insert(7, -3);
+	// insert(5, -5);
 }
 
 const __int128& Board::getRawBoard() const
 {
 	return board;
+}
+
+
+const std::string LINE = "                 |\n";
+string State::prettyPrint() const
+{
+	ostringstream ss;
+	ss << 
+R"(13 14 15 16 17 18|19 20 21 22 23 24
+\/ \/ \/ \/ \/ \/|\/ \/ \/ \/ \/ \/
+)";
+	for (int i = 12; i < m_board.size(); i++)
+	{
+		int val = (int)m_board[i];
+		if (val == 0)
+		{
+			ss << "  ";
+		}
+		else
+		{
+			ss << abs(val) << ((val > 0) ? "W" : "B");
+		}
+		ss << ((i == 17) ? "|" : " ");
+	}
+	ss << endl;
+	for (int i = 0; i < 5; i++)
+	{
+		ss << LINE;
+	}
+	for (int i = 11; i >= 0; i--)
+	{
+				int val = (int)m_board[i];
+		if (val == 0)
+		{
+			ss << "  ";
+		}
+		else
+		{
+			ss << abs(val) << ((val > 0) ? "W" : "B");
+		}
+		ss << ((i == 6) ? "|" : " ");
+	}
+	ss << endl << 
+R"(/\ /\ /\ /\ /\ /\|/\ /\ /\ /\ /\ /\
+12 11 10  9  8  7| 6  5  4  3  2  1)";
+
+	ss << "\t\t" << "WB:" << (int)m_board.getBumpedCount(Color::WHITE) 
+			<< "\tBB:" << (int)m_board.getBumpedCount(Color::BLACK);
+	return ss.str();
 }
