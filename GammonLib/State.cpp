@@ -55,7 +55,7 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 	}
 
 	if (!placePiece(end, turn)) return false;
-	m_board.modify(start, -1);
+	m_board.modify(start, -delta);
 
 	return true;
 }
@@ -83,7 +83,7 @@ bool State::placePiece(int8_t end, const Color& turn)
 	else if (getPieceCount(end) == 1) //bumping
 	{
 		m_board.insert(end, delta);
-		m_board.modify((Color)(delta * -1), 1);
+		m_board.modify((Color)(-delta), 1);
 	}
 	else return false; //more than 1 enemy color, fail turn.
 	return true;
