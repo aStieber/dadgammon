@@ -17,13 +17,17 @@ class GammonRunner
 public:
 	GammonRunner(bool blackStarts);
 
+	void runGame();
+
+private:
+
+	bool getUserMoves(Play& p, const pair<int, int>& diceRoll);
 	bool isGameOver();
 	Color getCurrentPlayer() { return m_currentPlayer; };
 
 	bool processMove(Play& p);
 
 
-private:
 	State m_state;	
 	Color m_currentPlayer=Color::BLACK;
 };

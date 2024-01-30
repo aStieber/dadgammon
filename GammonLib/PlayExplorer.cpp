@@ -11,6 +11,12 @@ uint64_t getNodeCtorCount(){
 	return *NODE_COUNTER;
 }
 
+void resetNodeCtorCount()
+{
+	*NODE_COUNTER = 0;
+
+}
+
 PlayNode::PlayNode(const Play& _play)
 {
 	uint64_t count = NODE_COUNTER->fetch_add(1);
@@ -31,21 +37,12 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 	if (!origin.moves.empty())
 		throw runtime_error("findBestPlay() origin already contained moves.");
 
-
-	//We only care about the score of root's children - its score is not meaningful.
+	//We only care about the score of root's children - root score is not meaningful.
 	//We compute the possible moves based on this template roll, then recursively generate opposing team possibilities.
 	PlayNode root(origin);
+
 	//create children
-
 	MoveLawyer::computePossiblePlaysForRoll(&root, roll);
-
-	// cout <<"size: " <<  root.children.size()<< "\n"; 
-	// for (const shared_ptr<PlayNode>& possiblePlay : root.children)
-	// {
-	// 	cout << possiblePlay->play.toDebugStr() << endl;
-
-	// }
-
 
 	//score the children
 	vector<thread> tasks;
@@ -61,13 +58,11 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 		th.join();
 	}
 
-	const Color color = origin.color;
-
-	shared_ptr<PlayNode> bestChild;
-	float bestScore = color * -1 * INT_MAX;
-
 
 	//find best child.
+	const Color color = origin.color;
+	shared_ptr<PlayNode> bestChild;
+	float bestScore = color * -1 * INT_MAX;
 	for (const shared_ptr<PlayNode>& possiblePlay : root.children)
 	{
 		float score;
@@ -88,10 +83,7 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 	{
 		throw runtime_error("bestChild was null.");
 	}
-
-	cout << "\n\n=====RESULT=====\nBest Play:\n" << bestChild->toDebugStr() << endl;
-
-	return origin;
+	return bestChild->play;
 }
 
 float PlayNode::computeScoreRec(int searchDepth)

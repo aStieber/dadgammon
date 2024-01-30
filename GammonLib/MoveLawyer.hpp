@@ -12,7 +12,12 @@ public:
 	static void computePossiblePlaysForRoll(PlayNode* output, const pair<int,int>& roll, bool swapColor=false);
 
 
-	inline static vector<int8_t> getDiceFromRoll(const pair<int,int>& roll);
+	inline static vector<int8_t> getDiceFromRoll(const pair<int,int>& roll)
+	{
+		if (roll.first == roll.second)
+			return vector<int8_t>(4, (int8_t)roll.first);
+		return {(int8_t)roll.first, (int8_t)roll.second};
+	}
 	static vector<int> getSourceColumnsForDie(const State& s, Color turn, const int8_t die);
 
 

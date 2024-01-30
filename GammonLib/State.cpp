@@ -50,9 +50,9 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 		return true;
 	}
 	if (m_board[start] == 0)
-	{
 		return false;
-	}
+	if (std::signbit(m_board[start]) != std::signbit(delta))
+		return false;
 
 	if (!placePiece(end, turn)) return false;
 	m_board.modify(start, -delta);
@@ -62,11 +62,10 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 
 bool State::moveBumpedPiece(int8_t end, const Color& turn)
 {
-	if (int bc = getBumpedCount(turn))
+	if (getBumpedCount(turn))
 	{
 		m_board.modifyBumpedCount(turn, -1);
 		placePiece(end, turn);
-		m_board.modify(end, (signed char)-turn);
 		return true;
 	}
 	throw runtime_error("empty bump count");
@@ -83,7 +82,7 @@ bool State::placePiece(int8_t end, const Color& turn)
 	else if (getPieceCount(end) == 1) //bumping
 	{
 		m_board.insert(end, delta);
-		m_board.modify((Color)(-delta), 1);
+		m_board.modifyBumpedCount((Color)(-delta), 1);
 	}
 	else return false; //more than 1 enemy color, fail turn.
 	return true;
@@ -129,7 +128,6 @@ float State::calculateScore() const
 	case Color::WHITE: return WIN_REWARD;
 	case Color::BLACK: return -WIN_REWARD;
 	}
-
 
 	for (size_t i=0; i < m_board.size(); i++)
 	{
@@ -205,7 +203,7 @@ void Board::insert(int i, signed char value)
 }
 
 const __int128 BUMP_MASK = 0xF;
-const int WHITE_BUMPED_OFFSET = 0x78; //0x78-0x7B
+const int WHITE_BUMPED_OFFSET = 0x79; //0x78-0x7B
 const int BLACK_BUMPED_OFFSET = WHITE_BUMPED_OFFSET + 0x4; //0x7C-0x7F
 signed char Board::getBumpedCount(const Color& c) const
 {
@@ -259,19 +257,12 @@ string boardToBin(__int128 board)
 
 Board::Board()
 {
-	board = 0x00f0000014030001;
-	board = (board << 64) | 0xb28000e836000002;
-	//white/+
-	// insert(0, 2);
-	// insert(11, 5);
-	// insert(16, 3);
-	// insert(18, 5);
+	//no support for 128-bit integer constants, so have to do this.
+	//board = 0x00f0000014030001; 
+	//board = (board << 64) | 0xb28000e836000002;
 
-	// //black/-
-	// insert(23, -2);
-	// insert(12, -5);
-	// insert(7, -3);
-	// insert(5, -5);
+	board = 0x04f0000014030001; 
+	board = (board << 64) | 0xb28000e83bff8000;
 }
 
 const __int128& Board::getRawBoard() const
@@ -281,7 +272,7 @@ const __int128& Board::getRawBoard() const
 
 
 const std::string LINE = "                 |\n";
-string State::prettyPrint() const
+string State::toPrettyStr() const
 {
 	ostringstream ss;
 	ss << 
@@ -301,14 +292,13 @@ R"(13 14 15 16 17 18|19 20 21 22 23 24
 		}
 		ss << ((i == 17) ? "|" : " ");
 	}
-	ss << endl;
-	for (int i = 0; i < 5; i++)
-	{
-		ss << LINE;
-	}
+	ss << endl << LINE << LINE;
+	ss << "            " << "WB:" << (int)m_board.getBumpedCount(Color::WHITE) 
+				<< " | " << "BB:" << (int)m_board.getBumpedCount(Color::BLACK) 
+				<< "\n"<< LINE << LINE;
 	for (int i = 11; i >= 0; i--)
 	{
-				int val = (int)m_board[i];
+		int val = (int)m_board[i];
 		if (val == 0)
 		{
 			ss << "  ";
@@ -323,7 +313,5 @@ R"(13 14 15 16 17 18|19 20 21 22 23 24
 R"(/\ /\ /\ /\ /\ /\|/\ /\ /\ /\ /\ /\
 12 11 10  9  8  7| 6  5  4  3  2  1)";
 
-	ss << "\t\t" << "WB:" << (int)m_board.getBumpedCount(Color::WHITE) 
-			<< "\tBB:" << (int)m_board.getBumpedCount(Color::BLACK);
 	return ss.str();
 }

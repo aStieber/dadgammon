@@ -116,15 +116,6 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 	}
 
 }
-
-
-vector<int8_t> MoveLawyer::getDiceFromRoll(const pair<int,int>& roll)
-{
-	if (roll.first == roll.second)
-		return vector<int8_t>(4, (int8_t)roll.first);
-	return {(int8_t)roll.first, (int8_t)roll.second};
-}
-
 vector<int> MoveLawyer::getSourceColumnsForDie(const State& s, const Color turn, const int8_t die)
 {
 	if (s.getBumpedCount(turn))

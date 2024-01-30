@@ -10,6 +10,7 @@ struct HashPlayNode
 };
 
 uint64_t getNodeCtorCount();
+void resetNodeCtorCount();
 
 bool operator==(const shared_ptr<PlayNode>& x, const shared_ptr<PlayNode>& y);
 

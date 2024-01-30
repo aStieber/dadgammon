@@ -85,7 +85,7 @@ struct State
 	float calculateScore() const;
 
 	std::string toDebugStr() const;
-	std::string prettyPrint() const;
+	std::string toPrettyStr() const;
 
 
 private:
