@@ -8,18 +8,35 @@ State::State()
 	m_board = Board();
 }
 
+State::State(const State& s)
+{
+	m_board = s.getBoard();
+}
+
+
 Color State::getWinner() const
 {
 	//todo: this can be improved
-	int whiteCount = getBumpedCount(Color::WHITE);
-	int blackCount = getBumpedCount(Color::BLACK);
-	for (size_t i = 0; i < m_board.size(); i++)
+	//if any bits match, Black has pieces
+	/*
+	__int128 BLACK_WIN_MASK = 0xf084210842108421;
+	BLACK_WIN_MASK = (BLACK_WIN_MASK << 64) | 0x0842108421084210;
+
+	if (!(m_board.getRawBoard() & BLACK_WIN_MASK))
 	{
-		if (m_board[i] > 0) whiteCount += abs(m_board[i]);
-		else if (m_board[i] < 0) blackCount += abs(m_board[i]);
+		return Color::BLACK;
 	}
-	if (!whiteCount) return Color::WHITE;
-	if (!blackCount) return Color::BLACK;
+	*/
+	bool blackHasPieces = m_board.getBumpedCount(Color::BLACK);
+	bool whiteHasPieces = m_board.getBumpedCount(Color::WHITE);
+
+	for (size_t i = 0; i < m_board.size() && !(blackHasPieces && whiteHasPieces); i++)
+	{
+		blackHasPieces |= m_board[i] < 0;
+		whiteHasPieces |= m_board[i] > 0;
+	}
+	if (!blackHasPieces) return Color::BLACK;
+	if (!whiteHasPieces) return Color::WHITE;
 	return Color::NONE;
 }
 
@@ -44,15 +61,16 @@ bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 		//moving a bumped back in
 		return moveBumpedPiece(end, turn);
 	}
+	if (m_board[start] == 0)
+		return false;
+	if (std::signbit(m_board[start]) != std::signbit(delta))
+		return false;
 	if (end == Special::OFF)
 	{
 		m_board.modify(start, -delta);
 		return true;
 	}
-	if (m_board[start] == 0)
-		return false;
-	if (std::signbit(m_board[start]) != std::signbit(delta))
-		return false;
+
 
 	if (!placePiece(end, turn)) return false;
 	m_board.modify(start, -delta);
@@ -64,9 +82,12 @@ bool State::moveBumpedPiece(int8_t end, const Color& turn)
 {
 	if (getBumpedCount(turn))
 	{
-		m_board.modifyBumpedCount(turn, -1);
-		placePiece(end, turn);
-		return true;
+		if (placePiece(end, turn))
+		{
+			m_board.modifyBumpedCount(turn, -1);
+			return true;
+		}
+		return false;
 	}
 	throw runtime_error("empty bump count");
 }
@@ -118,11 +139,11 @@ float State::calculateScore() const
 	float score = 0;
 
 	//improvements here, can check state of opponent home zone.
-	constexpr float BUMPED_PENALTY = 24+3.5;
+	constexpr float BUMPED_PENALTY = 24+6+3.5;
 	score += getBumpedCount(Color::BLACK) * BUMPED_PENALTY;
 	score -= getBumpedCount(Color::WHITE) * BUMPED_PENALTY;
 
-	constexpr float WIN_REWARD = 1000.;
+	constexpr float WIN_REWARD = 1000000.;
 	switch (getWinner())
 	{
 	case Color::WHITE: return WIN_REWARD;
@@ -163,7 +184,7 @@ signed char Board::operator[](int i) const
 {
 	signed char tmp = (board >> (i * 5)) & POINT_MASK;
 	if (tmp & 0x10)
-		tmp = tmp | 0xE0; //copy sign bit to bits 6-8.
+		tmp = tmp | 0xE0; //copy sign bit to bits 6-8 to preserve 2's complement.
 	return tmp;
 }
 
@@ -203,7 +224,7 @@ void Board::insert(int i, signed char value)
 }
 
 const __int128 BUMP_MASK = 0xF;
-const int WHITE_BUMPED_OFFSET = 0x79; //0x78-0x7B
+const int WHITE_BUMPED_OFFSET = 0x78; //0x78-0x7B
 const int BLACK_BUMPED_OFFSET = WHITE_BUMPED_OFFSET + 0x4; //0x7C-0x7F
 signed char Board::getBumpedCount(const Color& c) const
 {
@@ -225,6 +246,7 @@ void Board::modifyBumpedCount(const Color& c, signed char delta)
 
 	if (getBumpedCount(c) != val)
 	{
+		cout << "after c: " << (int)getBumpedCount(c) << " val: " << (int)val << endl << boardToBin(board) << endl;
 		throw runtime_error("bump write failed");
 	}
 }
@@ -258,11 +280,17 @@ string boardToBin(__int128 board)
 Board::Board()
 {
 	//no support for 128-bit integer constants, so have to do this.
-	//board = 0x00f0000014030001; 
-	//board = (board << 64) | 0xb28000e836000002;
+	board = 0x00f0000014030001; 
+	board = (board << 64) | 0xb28000e836000002;
 
-	board = 0x04f0000014030001; 
-	board = (board << 64) | 0xb28000e83bff8000;
+	//stuff bumped
+	// board = 0x04f0000014030001; 
+	// board = (board << 64) | 0xb28000e83bff8000;
+
+	//white about to win
+	//001000000000000000000000000e037d
+	// board = 0x0010000000000000; 
+	// board = (board << 64) | 0x00000000000e037d;
 }
 
 const __int128& Board::getRawBoard() const

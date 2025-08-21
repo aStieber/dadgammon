@@ -3,8 +3,6 @@
 #include "CommonTypes.hpp"
 
 
-
-
 /*
 
 	so it's 24 tiles that can store up to 15 pieces of either color
@@ -41,6 +39,7 @@ struct Board
 	bool operator==(const Board& rhs) const;
 
 	const __int128& getRawBoard() const; 
+	void setRawBoard(__int128 b) {board = b;}
 
 private:
 	__int128 board;
@@ -57,6 +56,7 @@ struct State
 	//https://en.wikipedia.org/wiki/Backgammon_notation
 
 	State();
+	State(const State& s);
 
 	bool movePiece(int8_t start, int8_t end, const Color& turn);
 
@@ -87,6 +87,7 @@ struct State
 	std::string toDebugStr() const;
 	std::string toPrettyStr() const;
 
+	void debug_setRawBoard(__int128 b) {m_board.setRawBoard(b);}
 
 private:
 	bool moveBumpedPiece(int8_t end, const Color& turn);

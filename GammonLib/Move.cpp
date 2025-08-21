@@ -4,7 +4,7 @@ string Play::toDebugStr() const
 {
 	ostringstream ss;
 
-	ss << "Color: " << color << " Dice: ";
+	ss << "Color: " << (color == Color::WHITE ? "White" : "Black") << " Dice: ";
 	for (const int& die : dice)
 	{
 		ss << die;

@@ -21,7 +21,7 @@ public:
 	static vector<int> getSourceColumnsForDie(const State& s, Color turn, const int8_t die);
 
 
-	static void getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice);
+	static int8_t getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice);
 
 };
 

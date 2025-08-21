@@ -49,10 +49,9 @@ void MoveLawyer::computePossiblePlaysForRoll(PlayNode* output, const pair<int,in
 		//reverse dice order, only matters for non-duplicate rolls.
 		getPossiblePlaysForDice(output, p_0, {dice[1], dice[0]});
 	}
-
 }
 
-void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice)
+int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice)
 {		   
 	//given a State s_1, a die, and a color, generate all possible s_2s.
 
@@ -60,6 +59,7 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 	remainingDice.pop_back();
 
 	const Color color = currentPlay.color;
+	int8_t numValidPlays = 0;
 	
 	//for each source column, execute the die action and update the state.
 	for (const int& start : getSourceColumnsForDie(currentPlay.state, color, die))
@@ -89,7 +89,11 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 
 		//kill the branch if the move isn't legal.
 		if (!tmpState.movePiece(start, end, color)) 
+		{
 			continue;
+		}
+
+		numValidPlays++;
 
 		//create new Play for children
 		Play p = currentPlay;
@@ -100,8 +104,13 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 		if (remainingDice.size())
 		{
 			//cout << "RECURSING: " << p.toDebugStr() << endl;
-			getPossiblePlaysForDice(output, p, remainingDice);
+			if (0 == getPossiblePlaysForDice(output, p, remainingDice))
+			{
+				//if there's no further plays possible, we need to save our node as-is.
+				output->children.insert(shared_ptr<PlayNode>(new PlayNode(p)));
+			}
 		}
+		//if we've used all the dice
 		else if (p.moves.size() == p.dice.size())
 		{
 			//cout << "INSERTING: " << p.toDebugStr() << endl;
@@ -114,8 +123,9 @@ void MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPl
 			throw runtime_error(ss.str());
 		}
 	}
-
+	return numValidPlays;
 }
+
 vector<int> MoveLawyer::getSourceColumnsForDie(const State& s, const Color turn, const int8_t die)
 {
 	if (s.getBumpedCount(turn))

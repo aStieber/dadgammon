@@ -20,15 +20,18 @@ void resetNodeCtorCount()
 PlayNode::PlayNode(const Play& _play)
 {
 	uint64_t count = NODE_COUNTER->fetch_add(1);
-	if (count % divisor == 0)
+	if (count % divisor == 0 && count != 0)
 	{
-		cout << "PlayNode::ctor " << count << endl;
+		cout << "PlayNode::ctor " << count / 1000000 << "M" << endl;
 	}
 	play = _play;
 }
 
 PlayNode::~PlayNode(){}
 
+std::mutex MAP_LOCK;
+std::map<__int128, float> BOARD_TO_SCORE_MAP;
+uint64_t SKIP_COUNT;
 
 Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, int searchDepth)
 {
@@ -36,6 +39,14 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 		throw runtime_error("Invalid Color");
 	if (!origin.moves.empty())
 		throw runtime_error("findBestPlay() origin already contained moves.");
+
+	/*
+	MAP_LOCK.lock();
+	BOARD_TO_SCORE_MAP.clear();
+	cout << "SKIP_COUNT: " << SKIP_COUNT << endl;
+	SKIP_COUNT = 0;
+	MAP_LOCK.unlock();
+	*/
 
 	//We only care about the score of root's children - root score is not meaningful.
 	//We compute the possible moves based on this template roll, then recursively generate opposing team possibilities.
@@ -45,19 +56,13 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 	MoveLawyer::computePossiblePlaysForRoll(&root, roll);
 
 	//score the children
-	vector<thread> tasks;
-	for (const shared_ptr<PlayNode>& possiblePlay : root.children)
+	vector<shared_ptr<PlayNode>> rawPlays(root.children.begin(), root.children.end());
+	#pragma omp parallel for num_threads(24) 
+	for (int i = 0; i < rawPlays.size(); i++)
 	{
-		tasks.push_back(thread { [possiblePlay, searchDepth]() {
-			possiblePlay->computeScoreRec(searchDepth);
-		}});
+		rawPlays[i]->computeScoreRec(searchDepth);
 	}
-
-	for (thread& th : tasks)
-	{
-		th.join();
-	}
-
+	rawPlays.clear();
 
 	//find best child.
 	const Color color = origin.color;
@@ -79,11 +84,13 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 		}
 	}
 
-	if (bestChild.get() == nullptr)
+	if (bestChild)
 	{
-		throw runtime_error("bestChild was null.");
+		return bestChild->play;
+
 	}
-	return bestChild->play;
+	cout << "No children, making no moves.\n";
+	return origin;
 }
 
 float PlayNode::computeScoreRec(int searchDepth)
@@ -104,6 +111,18 @@ float PlayNode::computeScoreRec(int searchDepth)
 		for (const shared_ptr<PlayNode>& child : children)
 		{
 			if (play.color == child->play.color) throw runtime_error("Parent and Child are matching colors.");
+
+			/*
+			MAP_LOCK.lock();
+			if (BOARD_TO_SCORE_MAP.contains(child->play.state.getBoard().getRawBoard()))
+			{
+				childScoreSum += BOARD_TO_SCORE_MAP[child->play.state.getBoard().getRawBoard()];
+				SKIP_COUNT++;
+				MAP_LOCK.unlock();
+				continue;
+			}
+			MAP_LOCK.unlock();
+			*/
 			
 			const int score = child->computeScoreRec(searchDepth - 1);
 
@@ -117,7 +136,7 @@ float PlayNode::computeScoreRec(int searchDepth)
 		}
 		//prune everything besides the best
 		children.clear();
-		if (bestChild.get() == nullptr)
+		if (bestChild)
 		{
 			children.insert(bestChild);
 		}
@@ -131,6 +150,12 @@ float PlayNode::computeScoreRec(int searchDepth)
 
 	hasScoreBeenComputed = true;
 	computedScore = myPlayScore + (DECAY_RATE * average);
+
+	/*
+	MAP_LOCK.lock();
+	BOARD_TO_SCORE_MAP[play.state.getBoard().getRawBoard()] = computedScore;
+	MAP_LOCK.unlock();
+	*/
 
 	return computedScore;
 }
