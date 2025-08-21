@@ -1,4 +1,4 @@
-//~/projects/dadgammon/build$ cmake .. & cmake --build . && ./dadgammon
+//~/projects/dadgammon/build$ cmake .. & cmake --build . && ./dadgammon | tee output.txt
 #include <iostream>
 #include <string>
 

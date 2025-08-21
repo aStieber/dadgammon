@@ -300,7 +300,7 @@ const __int128& Board::getRawBoard() const
 
 
 const std::string LINE = "                 |\n";
-string State::toPrettyStr() const
+string State::toMinimalStr() const
 {
 	ostringstream ss;
 	ss << 
@@ -342,4 +342,88 @@ R"(/\ /\ /\ /\ /\ /\|/\ /\ /\ /\ /\ /\
 12 11 10  9  8  7| 6  5  4  3  2  1)";
 
 	return ss.str();
+}
+
+
+std::string State::toPrettyStr() const {
+    std::ostringstream ss;
+    const int max_checkers_on_point = 9;
+
+    // --- Top Row Numbers ---
+    ss << "   13 14 15 16 17 18 | 19 20 21 22 23 24 \n";
+    ss << "---------------------|---------------------\n";
+
+    // --- Top Half of the Board ---
+    for (int i = 0; i < max_checkers_on_point; ++i) {
+        ss << " |";
+        // Left side (points 13-18)
+        for (int j = 12; j < 18; ++j) {
+            int count = m_board[j];
+            char piece = ' ';
+            if (count > 0 && i < count) {
+                piece = 'X'; // White
+            } else if (count < 0 && i < abs(count)) {
+                piece = 'O'; // Black
+            }
+            ss << " " << piece << " ";
+        }
+        ss << " |";
+        // Right side (points 19-24)
+        for (int j = 18; j < 24; ++j) {
+            int count = m_board[j];
+            char piece = ' ';
+            if (count > 0 && i < count) {
+                piece = 'X';
+            } else if (count < 0 && i < abs(count)) {
+                piece = 'O';
+            }
+            ss << " " << piece << " ";
+        }
+
+        if (i == 2) {
+            ss << "  O Bar: " << std::setw(2) << std::left << (int)getBumpedCount(Color::BLACK);
+        } 
+		else if (i == 3) {
+            ss << "  X Bar: " << std::setw(2) << std::left << (int)getBumpedCount(Color::WHITE);
+        } 
+        ss << "\n";
+    }
+
+    // --- Board Middle (Bar) ---
+    ss << "---------------------|---------------------\n";
+
+    // --- Bottom Half of the Board ---
+    for (int i = max_checkers_on_point - 1; i >= 0; --i) {
+        ss << " |";
+        // Left side (points 12-7)
+        for (int j = 11; j >= 6; --j) {
+            int count = m_board[j];
+            char piece = ' ';
+            if (count > 0 && i < count) {
+                piece = 'X';
+            } else if (count < 0 && i < abs(count)) {
+                piece = 'O';
+            }
+            ss << " " << piece << " ";
+        }
+        ss << " |";
+        // Right side (points 6-1)
+        for (int j = 5; j >= 0; --j) {
+            int count = m_board[j];
+            char piece = ' ';
+            if (count > 0 && i < count) {
+                piece = 'X';
+            } else if (count < 0 && i < abs(count)) {
+                piece = 'O';
+            }
+            ss << " " << piece << " ";
+        }
+        ss << "\n";
+    }
+    
+    // --- Bottom Row Numbers ---
+    ss << "---------------------|---------------------\n";
+    ss << "  12 11 10  9  8  7  | 6  5  4  3  2  1  \n";
+
+    return ss.str();
 }

@@ -6,24 +6,24 @@ using namespace std;
 #include <string>
 
 
-constexpr int8_t MAX_ROLL = 6;
+constexpr size_t MAX_ROLL = 6;
+constexpr size_t TOTAL_ROLLS = (MAX_ROLL * (MAX_ROLL + 1)) / 2;
+constexpr auto generatePossibleRolls() {
+    std::array<std::pair<int, int>, TOTAL_ROLLS> rolls = {};
+    size_t index = 0;
+
+    for (size_t i = 1; i <= MAX_ROLL; ++i) {
+        for (size_t j = i; j <= MAX_ROLL; ++j) {
+            rolls[index++] = std::make_pair(i, j);
+        }
+    }
+    return rolls;
+}
+constexpr auto POSSIBLE_OPPONENT_ROLLS = generatePossibleRolls();
+
 void MoveLawyer::computeOpponentPlays(PlayNode* root)
 {
-	//can this be done at compile time
-	vector<pair<int, int>> possibleRolls(21); //6+5+4+3+2+1=21
-	vector<pair<int, int>>::iterator it = possibleRolls.begin();
-
-
-	for (int8_t i = 1; i <= MAX_ROLL; i++)
-	{
-		for (int8_t j = i; j <= MAX_ROLL; j++)
-		{
-			*it = pair<int, int>{i, j};
-			it++;
-		}
-	}
-
-	for (const pair<int,int>& roll : possibleRolls)
+	for (const pair<int,int>& roll : POSSIBLE_OPPONENT_ROLLS)
 	{
 		computePossiblePlaysForRoll(root, roll, true);
 	}
@@ -55,6 +55,12 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 {		   
 	//given a State s_1, a die, and a color, generate all possible s_2s.
 
+
+	/*
+	for doubles
+	each die has the same options as the previous, plus the possible new space, and minus the possible moved-from space.
+	this can be determined by comparing the source columns
+	*/
 	int8_t die = remainingDice.back();
 	remainingDice.pop_back();
 

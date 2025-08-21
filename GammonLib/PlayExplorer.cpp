@@ -4,7 +4,6 @@
 #include <thread>
 
 
-const uint64_t divisor = 10 * 1000 * 1000;
 std::atomic_uint64_t* NODE_COUNTER=new atomic_uint64_t;
 
 uint64_t getNodeCtorCount(){
@@ -14,16 +13,19 @@ uint64_t getNodeCtorCount(){
 void resetNodeCtorCount()
 {
 	*NODE_COUNTER = 0;
-
 }
 
 PlayNode::PlayNode(const Play& _play)
 {
+	const uint64_t divisor = 10 * 1000 * 1000;
 	uint64_t count = NODE_COUNTER->fetch_add(1);
+	/*
 	if (count % divisor == 0 && count != 0)
 	{
-		cout << "PlayNode::ctor " << count / 1000000 << "M" << endl;
+		cout << "PlayNode::ctor " << count / 1000000 << "M\r";
+		cout.flush();
 	}
+	*/
 	play = _play;
 }
 

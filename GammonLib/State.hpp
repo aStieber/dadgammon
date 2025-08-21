@@ -85,6 +85,7 @@ struct State
 	float calculateScore() const;
 
 	std::string toDebugStr() const;
+	std::string toMinimalStr() const;
 	std::string toPrettyStr() const;
 
 	void debug_setRawBoard(__int128 b) {m_board.setRawBoard(b);}

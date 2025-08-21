@@ -70,15 +70,16 @@ bool GammonRunner::processMove(Play& p)
 	}
 	return result;
 }
-
 void GammonRunner::runGame()
 {
 	const Color humanColor = Color::WHITE;
 
+	resetNodeCtorCount();
+	uint64_t turnCount = 0;
+
 	while(!isGameOver())
 	{
 		/*
-
 		__int128 test = (static_cast<__int128>(0x01f00000140317c1ULL) << 64) | 0xc20000f03dd00000ULL;
 		m_state.debug_setRawBoard(test);
 		
@@ -89,7 +90,7 @@ void GammonRunner::runGame()
 		cout << m_state.toDebugStr() << endl;
 		cout << m_state.toPrettyStr() << endl;
 
-		pair<int, int> diceRoll =getRandomDiceRoll();//getDiceRoll();
+		pair<int, int> diceRoll = getRandomDiceRoll();//getDiceRoll();
 		Color currentPlayer = getCurrentPlayer();
 
 		cout << "\n\n=====New Turn=====\nDice: " << diceRoll.first << diceRoll.second << " Color: " << (currentPlayer == Color::WHITE ? "White" : "Black") << endl;
@@ -107,18 +108,19 @@ void GammonRunner::runGame()
 		}
 		else
 		{
-			resetNodeCtorCount();
+			uint64_t startCount = getNodeCtorCount();
 			std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
 
 			int searchDepth = 2;
 			p = PlayExplorer::findBestPlay(p, diceRoll, searchDepth);
 			
-			cout << "=====RESULT=====\nBest Play:\n" << p.toDebugStr() << endl;
+			cout << "\n=====RESULT=====\nBest Play:\n" << p.toDebugStr() << endl;
 
 			std::chrono::time_point<std::chrono::system_clock> endTime = std::chrono::system_clock::now();
 			double duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-			float nodesPerSec = getNodeCtorCount() / duration / 1000;
-			cout << "Total time: " << duration / 1000 << "s Speed: " << std::fixed << std::setprecision(2) << nodesPerSec << "M node/sec\n\n";
+			float nodes = getNodeCtorCount() - startCount;
+			float nodesPerSec = nodes/ duration / 1000;
+			cout << "Total time: " << duration / 1000 << "s | Nodes: " << nodes << " | Speed: " << std::fixed << std::setprecision(2) << nodesPerSec << "M node/sec\n\n";
 		}
 
 		if (!processMove(p))
@@ -127,12 +129,14 @@ void GammonRunner::runGame()
 		}
 		//swap player turn
 		m_currentPlayer = (Color)((int)currentPlayer*-1);
+		turnCount++;
 	}
 	Color winner = m_state.getWinner();
 	cout << "\n\n=====  GAME  ====="
 		 << "\n=====  OVER  ====="
 		 << "\n   Winner: " << m_state.getWinner()
-		 << endl << endl;
+		 << "\n   mean nodes/turn: " << (getNodeCtorCount() / turnCount) << endl;
+
 }
 
 int8_t moveToIndex(string str)

@@ -9,7 +9,7 @@ string Play::toDebugStr() const
 	{
 		ss << die;
 	}
-	ss << " Moves(1-): ";
+	ss << " Moves: ";
 	for (const Move& m : moves)
 	{
 		ss << "{" << (int)m.first+1 << "," << (int)m.second+1 << "} ";
