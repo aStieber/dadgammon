@@ -51,6 +51,11 @@ signed char State::getBumpedCount(const Color& c) const
 	}
 }
 
+bool State::movePiece(const Move& m, const Color& turn)
+{
+	return movePiece(m.first, m.second, turn);
+}
+
 bool State::movePiece(int8_t start, int8_t end, const Color& turn)
 {
 	int8_t delta = (int8_t)turn;  //white = +1, black = -1
@@ -130,7 +135,7 @@ bool State::isColorAllowedToScore(const Color& c) const
 		if (isPointFriendly(i, c))
 			return false;
 	}
-	return true;
+	return !getBumpedCount(c);
 }
 
 float State::calculateScore() const
@@ -380,17 +385,18 @@ std::string State::toPrettyStr() const {
             ss << " " << piece << " ";
         }
 
-        if (i == 2) {
-            ss << "  O Bar: " << std::setw(2) << std::left << (int)getBumpedCount(Color::BLACK);
+
+		if (i == 2) {
+            ss << "  White Bar(X): " << std::setw(2) << std::left << (int)getBumpedCount(Color::WHITE);
         } 
-		else if (i == 3) {
-            ss << "  X Bar: " << std::setw(2) << std::left << (int)getBumpedCount(Color::WHITE);
+        else if (i == 3) {
+            ss << "  Black Bar(O): " << std::setw(2) << std::left << (int)getBumpedCount(Color::BLACK);
         } 
         ss << "\n";
     }
 
     // --- Board Middle (Bar) ---
-    ss << "---------------------|---------------------\n";
+    ss << "---------------------|--------------------\n";
 
     // --- Bottom Half of the Board ---
     for (int i = max_checkers_on_point - 1; i >= 0; --i) {

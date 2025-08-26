@@ -1,4 +1,5 @@
 //~/projects/dadgammon/build$ cmake .. & cmake --build . && ./dadgammon | tee output.txt
+//cmake .. -DCMAKE_BUILD_TYPE=Debug
 #include <iostream>
 #include <string>
 

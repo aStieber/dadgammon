@@ -70,6 +70,8 @@ bool GammonRunner::processMove(Play& p)
 	}
 	return result;
 }
+
+const bool BOT_GAME = true;
 void GammonRunner::runGame()
 {
 	const Color humanColor = Color::WHITE;
@@ -98,11 +100,11 @@ void GammonRunner::runGame()
 		p.color = currentPlayer;
 		p.state = m_state;
 
-		if (0 && humanColor == currentPlayer)
+		if (!BOT_GAME && humanColor == currentPlayer)
 		{
 			while (!getUserMoves(p, diceRoll))
 			{
-				cout << "Invalid move string. Please retry." << endl;
+				cout << "Your input was invalid. Please retry." << endl;
 				p.moves.clear();
 			}
 		}
@@ -111,7 +113,7 @@ void GammonRunner::runGame()
 			uint64_t startCount = getNodeCtorCount();
 			std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
 
-			int searchDepth = 2;
+			int searchDepth = 1; //1 = consider opponent moves
 			p = PlayExplorer::findBestPlay(p, diceRoll, searchDepth);
 			
 			cout << "\n=====RESULT=====\nBest Play:\n" << p.toDebugStr() << endl;
@@ -159,7 +161,9 @@ bool GammonRunner::getUserMoves(Play& p, const pair<int, int>& diceRoll)
 	5/off 2/off
 	*/
 
-	cout << "Please enter moves for " << (p.color == Color::WHITE ? "White" : "Black") << ": ";
+	Play tmpPlay = p;
+
+	cout << "Please enter moves for " << p.color << ": ";
 	string str;
 	getline(cin, str);
 
@@ -187,35 +191,50 @@ bool GammonRunner::getUserMoves(Play& p, const pair<int, int>& diceRoll)
 
 		for (int i = 0; i < moveCount; i++)
 		{
-			p.moves.push_back(m);
-		}
-	}
-
-	//verify that the moves are possible given the dice roll?
-	vector<int8_t> diceVector = MoveLawyer::getDiceFromRoll(diceRoll);
-	for (const Move& m : p.moves)
-	{
-		if (m.first >= 0 && m.second >= 0)
-		{
-			int8_t delta = abs(m.second - m.first);
-			auto it = std::find(diceVector.begin(), diceVector.end(), delta);
-			if (it != diceVector.end()) {
-			  diceVector.erase(it);
-			}
-			else
-			{
-				cout << "Could not find die matching move.\n";
-				return false;
-			}
+			tmpPlay.moves.push_back(m);
 		}
 	}
 
 	//the first N moves must be from BUMP, where N is number of bumped pieces.
-	for (int i = 0; i < p.state.getBumpedCount(p.color); i++)
+	for (int i = 0; i < tmpPlay.state.getBumpedCount(p.color); i++)
 	{
-		if (i < p.moves.size() && p.moves[i].first != Special::BUMP)
+		if (i < tmpPlay.moves.size() && tmpPlay.moves[i].first != Special::BUMP)
 		{
 			cout << "Gotta moved your bumped stuff.\n";
+			return false;
+		}
+	}
+
+	//for each move, verify it's possible
+	for (Move& m : tmpPlay.moves)
+	{
+		if (!tmpPlay.state.movePiece(m, tmpPlay.color))
+		{
+			std::cout <<"The following move was invalid: " << (int)m.first << ", " << (int)m.second;
+			return false;
+		}
+	}
+
+	//verify that there are not more moves possible
+	auto rolls = MoveLawyer::getDiceFromRoll(diceRoll);
+	if ( tmpPlay.moves.size() > rolls.size() )
+	{
+		cout << "You moved too many pieces for that roll.\n";
+		return false;
+	}
+	else if ( tmpPlay.moves.size() < rolls.size() )
+	{
+		//made less moves than available. This is only illegal if there are available moves.
+
+		//get all possible moves that can be made, use unchanged Play
+		PlayNode root(p);
+		MoveLawyer::computePossiblePlaysForRoll(&root, diceRoll);
+		//check if the current state is among them.
+
+		std::shared_ptr<PlayNode> tmpPlayNode(new PlayNode(tmpPlay));
+		if (!root.children.contains(tmpPlayNode))
+		{
+			cout << "You have available moves.\n";
 			return false;
 		}
 	}

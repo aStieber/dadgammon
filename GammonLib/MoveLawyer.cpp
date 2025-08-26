@@ -5,19 +5,18 @@ using namespace std;
 #include <iostream>
 #include <string>
 
-
 constexpr size_t MAX_ROLL = 6;
 constexpr size_t TOTAL_ROLLS = (MAX_ROLL * (MAX_ROLL + 1)) / 2;
 constexpr auto generatePossibleRolls() {
-    std::array<std::pair<int, int>, TOTAL_ROLLS> rolls = {};
-    size_t index = 0;
+	std::array<std::pair<int, int>, TOTAL_ROLLS> rolls = {};
+	size_t index = 0;
 
-    for (size_t i = 1; i <= MAX_ROLL; ++i) {
-        for (size_t j = i; j <= MAX_ROLL; ++j) {
-            rolls[index++] = std::make_pair(i, j);
-        }
-    }
-    return rolls;
+	for (size_t i = 1; i <= MAX_ROLL; ++i) {
+		for (size_t j = i; j <= MAX_ROLL; ++j) {
+			rolls[index++] = std::make_pair(i, j);
+		}
+	}
+	return rolls;
 }
 constexpr auto POSSIBLE_OPPONENT_ROLLS = generatePossibleRolls();
 
@@ -41,7 +40,7 @@ void MoveLawyer::computePossiblePlaysForRoll(PlayNode* output, const pair<int,in
 		if (p_0.color == Color::NONE) throw runtime_error("Provided a node without color and asked to swap.");
 		p_0.color = (Color)((int)p_0.color*-1);
 	}
-	
+
 	getPossiblePlaysForDice(output, p_0, dice);
 
 	if (dice.size() == 2)
@@ -52,7 +51,7 @@ void MoveLawyer::computePossiblePlaysForRoll(PlayNode* output, const pair<int,in
 }
 
 int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice)
-{		   
+{
 	//given a State s_1, a die, and a color, generate all possible s_2s.
 
 
@@ -60,21 +59,35 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 	for doubles
 	each die has the same options as the previous, plus the possible new space, and minus the possible moved-from space.
 	this can be determined by comparing the source columns
+
+	
+
+
+	this is gonna recurse 4 times. for loop? makes caching easier
+
+	get a list of columns i could move to
+
+	set(each_source_column * set(n,2n,3n,4n))
+	for each targetcolumn
+		immediately disqualify those with opponent tiles
 	*/
+
+
 	int8_t die = remainingDice.back();
 	remainingDice.pop_back();
 
 	const Color color = currentPlay.color;
 	int8_t numValidPlays = 0;
+
 	
 	//for each source column, execute the die action and update the state.
-	for (const int& start : getSourceColumnsForDie(currentPlay.state, color, die))
+	for (const int& start : getSourceColumnsForDie(currentPlay.state, color, die)) //for (int i = numRecursions, don't need to check first column again after this)
 	{
 		State tmpState = currentPlay.state;
+
 		int end = start;
 		int speculativeColumn = start + (int)color * die;
 
-		
 		if (start == Special::BUMP)
 		{
 			if (color == Color::BLACK)
@@ -93,7 +106,7 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 			end = speculativeColumn;
 		}
 
-		//kill the branch if the move isn't legal.
+		//prune the branch if the move isn't legal.
 		if (!tmpState.movePiece(start, end, color)) 
 		{
 			continue;
@@ -101,11 +114,14 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 
 		numValidPlays++;
 
+
+
 		//create new Play for children
 		Play p = currentPlay;
 		p.state = tmpState;
 		p.dice.push_back(die);
 		p.moves.push_back(Move{start, end});
+		//std::cout << "Searching state: " << p.toDebugStr();
 
 		if (remainingDice.size())
 		{

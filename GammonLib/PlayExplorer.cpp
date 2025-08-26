@@ -42,14 +42,6 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 	if (!origin.moves.empty())
 		throw runtime_error("findBestPlay() origin already contained moves.");
 
-	/*
-	MAP_LOCK.lock();
-	BOARD_TO_SCORE_MAP.clear();
-	cout << "SKIP_COUNT: " << SKIP_COUNT << endl;
-	SKIP_COUNT = 0;
-	MAP_LOCK.unlock();
-	*/
-
 	//We only care about the score of root's children - root score is not meaningful.
 	//We compute the possible moves based on this template roll, then recursively generate opposing team possibilities.
 	PlayNode root(origin);
@@ -62,7 +54,7 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 	#pragma omp parallel for num_threads(24) 
 	for (int i = 0; i < rawPlays.size(); i++)
 	{
-		rawPlays[i]->computeScoreRec(searchDepth);
+		rawPlays[i]->computeScoreRec(1 + searchDepth);
 	}
 	rawPlays.clear();
 
@@ -114,18 +106,6 @@ float PlayNode::computeScoreRec(int searchDepth)
 		{
 			if (play.color == child->play.color) throw runtime_error("Parent and Child are matching colors.");
 
-			/*
-			MAP_LOCK.lock();
-			if (BOARD_TO_SCORE_MAP.contains(child->play.state.getBoard().getRawBoard()))
-			{
-				childScoreSum += BOARD_TO_SCORE_MAP[child->play.state.getBoard().getRawBoard()];
-				SKIP_COUNT++;
-				MAP_LOCK.unlock();
-				continue;
-			}
-			MAP_LOCK.unlock();
-			*/
-			
 			const int score = child->computeScoreRec(searchDepth - 1);
 
 			if ((play.color == Color::WHITE && bestScore < score) ||
@@ -145,19 +125,13 @@ float PlayNode::computeScoreRec(int searchDepth)
 	}
 
 	const float myPlayScore = play.state.calculateScore();
-	constexpr float DECAY_RATE = 0.1; //DECAY_RATE ^ N, where N is generation number.
+	constexpr float DECAY_RATE = 0.5; //DECAY_RATE ^ N, where N is generation number.
 
 	float average = 0;
 	if (childCount > 0) average = childScoreSum / childCount;
 
 	hasScoreBeenComputed = true;
 	computedScore = myPlayScore + (DECAY_RATE * average);
-
-	/*
-	MAP_LOCK.lock();
-	BOARD_TO_SCORE_MAP[play.state.getBoard().getRawBoard()] = computedScore;
-	MAP_LOCK.unlock();
-	*/
 
 	return computedScore;
 }

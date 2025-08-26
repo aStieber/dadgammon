@@ -2,7 +2,6 @@
 #define _STATE_
 #include "CommonTypes.hpp"
 
-
 /*
 
 	so it's 24 tiles that can store up to 15 pieces of either color
@@ -58,6 +57,7 @@ struct State
 	State();
 	State(const State& s);
 
+	bool movePiece(const std::pair<signed char, signed char>& m, const Color& turn);
 	bool movePiece(int8_t start, int8_t end, const Color& turn);
 
 
