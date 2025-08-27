@@ -39,7 +39,7 @@ Play PlayExplorer::findBestPlay(const Play& origin, const pair<int, int>& roll, 
 {
 	if (origin.color == Color::NONE)
 		throw runtime_error("Invalid Color");
-	if (!origin.moves.empty())
+	if (origin.getMoveCount() > 0)
 		throw runtime_error("findBestPlay() origin already contained moves.");
 
 	//We only care about the score of root's children - root score is not meaningful.

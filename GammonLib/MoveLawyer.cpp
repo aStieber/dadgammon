@@ -5,6 +5,25 @@ using namespace std;
 #include <iostream>
 #include <string>
 
+class IntermediateStateCacher
+{
+public:
+	IntermediateStateCacher() {};
+	bool contains(State& s) 
+	{
+		return m_set.contains(s.getBoard().getRawBoard());
+	}
+
+	void insert(State& s)
+	{
+		m_set.insert(s.getBoard().getRawBoard());
+	}
+
+protected:
+	unordered_set<__int128> m_set;
+
+};
+
 constexpr size_t MAX_ROLL = 6;
 constexpr size_t TOTAL_ROLLS = (MAX_ROLL * (MAX_ROLL + 1)) / 2;
 constexpr auto generatePossibleRolls() {
@@ -33,24 +52,36 @@ void MoveLawyer::computePossiblePlaysForRoll(PlayNode* output, const pair<int,in
 	//populates the Plays of a playnode.
 	const vector<int8_t> dice = getDiceFromRoll(roll);
 	Play p_0 = output->play;
-	p_0.dice.clear();
-	p_0.moves.clear();
+	memset(p_0.dice, 0, sizeof(p_0.dice));
+	memset(p_0.moves, 0, sizeof(p_0.moves));
 	if (swapColor)
 	{
 		if (p_0.color == Color::NONE) throw runtime_error("Provided a node without color and asked to swap.");
 		p_0.color = (Color)((int)p_0.color*-1);
 	}
 
-	getPossiblePlaysForDice(output, p_0, dice);
-
 	if (dice.size() == 2)
 	{
+		getPossiblePlaysForDice(output, p_0, dice, std::shared_ptr<IntermediateStateCacher>());
 		//reverse dice order, only matters for non-duplicate rolls.
-		getPossiblePlaysForDice(output, p_0, {dice[1], dice[0]});
+		getPossiblePlaysForDice(output, p_0, {dice[1], dice[0]}, std::shared_ptr<IntermediateStateCacher>()); //todo: this is so wasteful
 	}
+	else if (dice.size() == 4)
+	{
+		std::shared_ptr<IntermediateStateCacher> cacher(new IntermediateStateCacher());
+		getPossiblePlaysForDice(output, p_0, dice, cacher);
+	}
+	else
+	{
+		ostringstream ss;
+		ss << "Invalid dice count, wtf: " << dice.size() << endl;
+		throw runtime_error(ss.str());
+	}
+
 }
 
-int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice)
+
+uint16_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice, const std::shared_ptr<IntermediateStateCacher>& cacher, uint8_t depth)
 {
 	//given a State s_1, a die, and a color, generate all possible s_2s.
 
@@ -73,11 +104,13 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 	*/
 
 
+
+
 	int8_t die = remainingDice.back();
 	remainingDice.pop_back();
 
 	const Color color = currentPlay.color;
-	int8_t numValidPlays = 0;
+	uint16_t numValidPlays = 0;
 
 	
 	//for each source column, execute the die action and update the state.
@@ -114,36 +147,37 @@ int8_t MoveLawyer::getPossiblePlaysForDice(PlayNode* output, const Play& current
 
 		numValidPlays++;
 
-
+		//has this partial state already been explored. Only valid for quad rolls
+		if (cacher && cacher->contains(tmpState))
+		{
+			//state already explored
+			continue;
+		}
 
 		//create new Play for children
 		Play p = currentPlay;
 		p.state = tmpState;
-		p.dice.push_back(die);
-		p.moves.push_back(Move{start, end});
+		p.dice[depth] = die;
+		p.moves[depth] = Move{start, end};
 		//std::cout << "Searching state: " << p.toDebugStr();
 
 		if (remainingDice.size())
 		{
-			//cout << "RECURSING: " << p.toDebugStr() << endl;
-			if (0 == getPossiblePlaysForDice(output, p, remainingDice))
+			if (0 == getPossiblePlaysForDice(output, p, remainingDice, cacher, depth+1))
 			{
 				//if there's no further plays possible, we need to save our node as-is.
 				output->children.insert(shared_ptr<PlayNode>(new PlayNode(p)));
 			}
 		}
 		//if we've used all the dice
-		else if (p.moves.size() == p.dice.size())
+		else
 		{
 			//cout << "INSERTING: " << p.toDebugStr() << endl;
 			output->children.insert(shared_ptr<PlayNode>(new PlayNode(p)));
 		}
-		else 
-		{
-			ostringstream ss;
-			ss << "FUCKED: " << remainingDice.size() << "\n" << p.toDebugStr() << endl;
-			throw runtime_error(ss.str());
-		}
+
+		if (cacher)
+			cacher->insert(tmpState);
 	}
 	return numValidPlays;
 }

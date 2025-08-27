@@ -1,5 +1,8 @@
 //~/projects/dadgammon/build$ cmake .. & cmake --build . && ./dadgammon | tee output.txt
-//cmake .. -DCMAKE_BUILD_TYPE=Debug
+
+//cmake .. -DCMAKE_BUILD_TYPE=Debug && cmake --build .
+//valgrind --tool=callgrind ./dadgammon
+//kcachegrind
 #include <iostream>
 #include <string>
 

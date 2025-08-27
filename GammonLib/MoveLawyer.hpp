@@ -5,6 +5,9 @@
 #include "CommonTypes.hpp"
 #include "PlayExplorer.hpp"
 
+
+class IntermediateStateCacher;
+
 class MoveLawyer
 {
 public:
@@ -21,7 +24,7 @@ public:
 	static vector<int> getSourceColumnsForDie(const State& s, Color turn, const int8_t die);
 
 
-	static int8_t getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice);
+	static uint16_t getPossiblePlaysForDice(PlayNode* output, const Play& currentPlay, vector<int8_t> remainingDice, const std::shared_ptr<IntermediateStateCacher>& cacher, uint8_t depth=0);
 
 };
 

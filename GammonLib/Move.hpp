@@ -20,11 +20,12 @@ namespace Special
 struct Play
 {
 	Color color;
-	vector<int> dice;
-	vector<Move> moves;
+	int8_t dice[4];
+	Move moves[4];
 	State state;
 
 	string toDebugStr() const;
+	int getMoveCount() const;
 private:
 };
 

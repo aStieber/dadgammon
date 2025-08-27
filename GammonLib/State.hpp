@@ -21,6 +21,7 @@ I guess I just mask the bits into a char. Last 4 go to the last 4 of the char, s
 
  //0-indexed, size 24
 
+
 struct Board
 {
 	Board();

@@ -61,6 +61,8 @@ bool GammonRunner::processMove(Play& p)
 	bool result = true;
 	for (const Move& m : p.moves)
 	{
+		if (m.first == 0 && m.second == 0)
+			continue;
 		result &= m_state.movePiece(m.first, m.second, p.color);
 	}
 	if (!result)
@@ -105,7 +107,7 @@ void GammonRunner::runGame()
 			while (!getUserMoves(p, diceRoll))
 			{
 				cout << "Your input was invalid. Please retry." << endl;
-				p.moves.clear();
+				memset(p.moves, 0, sizeof(p.moves));
 			}
 		}
 		else
@@ -132,6 +134,8 @@ void GammonRunner::runGame()
 		//swap player turn
 		m_currentPlayer = (Color)((int)currentPlayer*-1);
 		turnCount++;
+
+		//return;
 	}
 	Color winner = m_state.getWinner();
 	cout << "\n\n=====  GAME  ====="
@@ -167,15 +171,15 @@ bool GammonRunner::getUserMoves(Play& p, const pair<int, int>& diceRoll)
 	string str;
 	getline(cin, str);
 
-	auto words_begin = std::sregex_iterator(str.begin(), str.end(), MOVE_REGEX);
-	auto words_end = std::sregex_iterator();
+	auto userInputBegin = std::sregex_iterator(str.begin(), str.end(), MOVE_REGEX);
 
-	if (words_begin == words_end)
+	if (userInputBegin == std::sregex_iterator())
 	{
 		return false;
 	}
 
-	for (std::sregex_iterator i = words_begin; i != words_end; ++i)
+	int moveCount = 0;
+	for (std::sregex_iterator i = userInputBegin; i != std::sregex_iterator(); ++i)
 	{
 		std::smatch match = *i;
 
@@ -183,22 +187,22 @@ bool GammonRunner::getUserMoves(Play& p, const pair<int, int>& diceRoll)
 		m.first = moveToIndex(match[1]);
 		m.second = moveToIndex(match[2]);
 
-		int moveCount = 1;
+		int dupeCount = 1;
 		if (match[4].length())
 		{
-			moveCount = stoi(match[4].str());
+			dupeCount = stoi(match[4].str());
 		}
 
-		for (int i = 0; i < moveCount; i++)
+		for (int i = 0; i < dupeCount; i++)
 		{
-			tmpPlay.moves.push_back(m);
+			tmpPlay.moves[moveCount] = m;
 		}
 	}
 
 	//the first N moves must be from BUMP, where N is number of bumped pieces.
 	for (int i = 0; i < tmpPlay.state.getBumpedCount(p.color); i++)
 	{
-		if (i < tmpPlay.moves.size() && tmpPlay.moves[i].first != Special::BUMP)
+		if (i < tmpPlay.getMoveCount() && tmpPlay.moves[i].first != Special::BUMP)
 		{
 			cout << "Gotta moved your bumped stuff.\n";
 			return false;
@@ -217,12 +221,12 @@ bool GammonRunner::getUserMoves(Play& p, const pair<int, int>& diceRoll)
 
 	//verify that there are not more moves possible
 	auto rolls = MoveLawyer::getDiceFromRoll(diceRoll);
-	if ( tmpPlay.moves.size() > rolls.size() )
+	if ( tmpPlay.getMoveCount() > rolls.size() )
 	{
 		cout << "You moved too many pieces for that roll.\n";
 		return false;
 	}
-	else if ( tmpPlay.moves.size() < rolls.size() )
+	else if ( tmpPlay.getMoveCount() < rolls.size() )
 	{
 		//made less moves than available. This is only illegal if there are available moves.
 

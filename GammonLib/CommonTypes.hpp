@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <bitset>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <limits>
